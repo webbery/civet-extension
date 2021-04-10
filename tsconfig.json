@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "target": "es6",
+        "sourceMap": true,
+        "noUnusedParameters": true,
+        "experimentalDecorators": true,
+        "declaration": true,
+        "baseUrl": "./",
+        "lib": ["es6", "DOM"]
+    },
+    "files": [
+        "civet.ts",
+        "src/**/*.ts"
+    ],
+    "exclude": ["node_modules"]
+}
