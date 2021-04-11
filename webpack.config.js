@@ -4,19 +4,19 @@ var path = require('path');
 var fs = require('fs');
 
 /* helper function to get into build directory */
-var distPath = function(name) {
-  if (undefined === name) {
-    return path.join('dist');
-  }
+// var distPath = function(name) {
+//   if (undefined === name) {
+//     return path.join('dist');
+//   }
 
-  return path.join('dist', name);
-};
+//   return path.join('dist', name);
+// };
 
 var webpack_opts = {
   entry: './civet.ts',
   mode: "production",
   output: {
-    path: path.resolve(__dirname, "dist"),
+    path: path.resolve(__dirname, "."),
     filename: 'index.js',
     libraryTarget: 'commonjs2'
   },
