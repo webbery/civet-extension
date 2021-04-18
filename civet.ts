@@ -107,7 +107,7 @@ import { Platform } from './src/Platform'
 
     load(path: string): Thenable<boolean> {
       console.info('read', path)
-      const msg = {id: 'load', db: extensionContext.currentDB, data: path}
+      const msg = {id: 'load', db: extensionContext.currentDB, data: { url: path} }
       extensionContext.send(JSON.stringify(msg))
       return;
     }
