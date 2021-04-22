@@ -1,11 +1,17 @@
 import { Platform } from './src/Platform'
+import { VWebSocket } from './src/VWebSocket'
 
+export namespace civet {
   export const version: string = '0.0.1';
 
-  export class ExtensionContext{
+  class ExtensionContext{
     constructor() {
       this._platform = new Platform()
-      this.ws = new WebSocket(this._url, 'civet-protocol')
+      if (typeof window !== 'undefined') {
+        this.ws = new WebSocket(this._url, 'civet-protocol')
+      } else {
+        this.ws = new VWebSocket(this._url, 'civet-protocol')
+      }
       this._initWebsocket()
     }
 
@@ -22,7 +28,7 @@ import { Platform } from './src/Platform'
 
     private _platform: Platform;
     private _currentDB: string;
-    private ws: WebSocket;
+    private ws: WebSocket|VWebSocket;
     private _url: string = 'ws://localhost:21313';
     private _config: any;
     static _isConnecting = false;
@@ -87,7 +93,6 @@ import { Platform } from './src/Platform'
   export declare function activate(context: ExtensionContext);
   export declare function unactivate();
 
-    
   export interface IProperty {
     readonly key: string;
   }
@@ -122,3 +127,6 @@ import { Platform } from './src/Platform'
     then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => TResult | Thenable<TResult>): Thenable<TResult>;
     then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => void): Thenable<TResult>;
   }
+}
+
+  

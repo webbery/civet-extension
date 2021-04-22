@@ -4,7 +4,8 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "install": "npm run build",
-        "build": "webpack"
+        "build": "webpack",
+        "test": "node test/test.js"
     },
     "devDependencies": {
         "@babel/core": "^7.4.5",
