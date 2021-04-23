@@ -1,7 +1,10 @@
-import { Platform } from './src/Platform'
-import { VWebSocket } from './src/VWebSocket'
+import { Platform } from './Platform/Platform'
+import { VWebSocket } from './WebSocket/VWebSocket'
 
 export namespace civet {
+  /**
+   * verson of civet extension
+   */
   export const version: string = '0.0.1';
 
   class ExtensionContext{
@@ -88,15 +91,6 @@ export namespace civet {
     }
   }
 
-  export let extensionContext: ExtensionContext = new ExtensionContext();
-
-  export declare function activate(context: ExtensionContext);
-  export declare function unactivate();
-
-  export interface IProperty {
-    readonly key: string;
-  }
-
   export class IResource {
     readonly id: number;
     readonly type: string;
@@ -113,7 +107,7 @@ export namespace civet {
     load(path: string): Thenable<boolean> {
       console.info('read', path)
       const msg = {id: 'load', db: extensionContext.currentDB, data: { url: path} }
-      extensionContext.send(JSON.stringify(msg))
+      civet.extensionContext.send(JSON.stringify(msg))
       return;
     }
     save(path: string): Thenable<boolean> {
@@ -122,11 +116,29 @@ export namespace civet {
     }
   }
 
-  export let resource: IResource = new IResource;
   interface Thenable<T> {
     then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => TResult | Thenable<TResult>): Thenable<TResult>;
     then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => void): Thenable<TResult>;
   }
+
+  /**
+   * extension context
+   */
+  export let extensionContext: ExtensionContext = new ExtensionContext();
+
+  export declare function activate(context: ExtensionContext);
+  export declare function unactivate();
+
+  export interface IProperty {
+    readonly key: string;
+  }
+
+  /**
+   * resource of uri, such as file, web page, or remote machine setting etc.
+   */
+  export let resource: IResource = new IResource;
+
+
 }
 
   

@@ -12,8 +12,22 @@ var fs = require('fs');
 //   return path.join('dist', name);
 // };
 
+function DtsBundlePlugin() {}
+DtsBundlePlugin.prototype.apply = function (compiler) {
+  compiler.plugin('done', function() {
+    var dts = require('dts-bundle')
+    dts.bundle({
+      name: 'civet',
+      main: 'src/civet.d.ts',
+      out: '../index.d.ts',
+      removeSource: true,
+      outputAsModuleFolder: true
+    })
+  })
+}
+
 var webpack_opts = {
-  entry: './civet.ts',
+  entry: './src/civet.ts',
   mode: "production",
   output: {
     path: path.resolve(__dirname, "."),
@@ -37,7 +51,8 @@ var webpack_opts = {
           failOnHint: true
         }
       }
-    })
+    }),
+    new DtsBundlePlugin()
   ],
   devtool: 'source-map',
   module: {
