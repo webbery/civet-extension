@@ -1,5 +1,4 @@
 import { Platform } from './Platform/Platform'
-import { VWebSocket } from './WebSocket/VWebSocket'
 
 export namespace civet {
   /**
@@ -7,32 +6,56 @@ export namespace civet {
    */
   export const version: string = '0.0.1';
 
+  const _url: string = 'ws://localhost:21313';
+  let ws = new WebSocket(_url, 'civet-protocol')
+
+  function send(msg: string|ArrayBuffer) {
+    this.ws.send(msg)
+  }
+
+  const CivetEvents = {
+    OnInit: 'config',
+    OnDBChange: 'dbchange',
+    OnDownloadError: 'download',
+    OnConnectError: 'conn_err',
+    OnConnectAgain: 'reconnect'
+  }
+
   class ExtensionContext{
     constructor() {
       this._platform = new Platform()
-      if (typeof window !== 'undefined') {
-        this.ws = new WebSocket(this._url, 'civet-protocol')
-      } else {
-        this.ws = new VWebSocket(this._url, 'civet-protocol')
-      }
       this._initWebsocket()
-    }
-
-    send(msg: string|ArrayBuffer) {
-      this.ws.send(msg)
+      this._events[CivetEvents.OnInit] = this._onInit
     }
 
     get currentDB(): string {
       return this._currentDB
     }
-    set currentDB(dbname: string) {
-      this._currentDB = dbname;
+
+    set onCurrentDBChange(cb: any) {
+      this._events[CivetEvents.OnDBChange] = cb;
     }
 
+    set onDownloadError(cb: any) {
+      this._events[CivetEvents.OnDownloadError] = cb;
+    }
+
+    set onCennectError(cb: any) {
+      this._events[CivetEvents.OnConnectError] = cb;
+    }
+
+    set onCennectAgain(cb: any) {
+      this._events[CivetEvents.OnConnectAgain] = cb;
+    }
+
+    get allDBs() {
+      return ''
+    }
+    
+    private _events: Map<string, any> = new Map<string, any>();
     private _platform: Platform;
     private _currentDB: string;
-    private ws: WebSocket|VWebSocket;
-    private _url: string = 'ws://localhost:21313';
+    private ws: WebSocket;
     private _config: any;
     static _isConnecting = false;
 
@@ -52,26 +75,24 @@ export namespace civet {
       if (!event.data) return
       console.info('_onmessage', event)
       const data = JSON.parse(event.data)
-      switch(data.id) {
-        case 'config':
-          this._config = data.config
-          let storage = extensionContext._platform.storage;
-          extensionContext._platform.storage.get(['current'], function(result) {
-            if (Object.keys(result).length === 0) {
-              storage.set({current: data.config.db[0]}, function(){})
-              extensionContext._currentDB = data.config.db[0]
-            }
-            else {
-              console.info('current:', result)
-              extensionContext._currentDB = result
-            }
-          })
-          break;
-        default:
-          console.info(event);
-          break;
-      }
+      this._events[data.id](data);
     }
+
+    private _onInit(data: any) {
+      this._config = data.config
+      let storage = extensionContext._platform.storage;
+      extensionContext._platform.storage.get(['current'], function(result) {
+        if (Object.keys(result).length === 0) {
+          storage.set({current: data.config.db[0]}, function(){})
+          extensionContext._currentDB = data.config.db[0]
+        }
+        else {
+          console.info('current:', result)
+          extensionContext._currentDB = result
+        }
+      })
+    }
+
     private _initWebsocket() {
       this.ws.onerror = this._onerror;
       this.ws.onopen = this._onopen;
@@ -83,7 +104,7 @@ export namespace civet {
       // if (ExtensionContext._isConnecting === false) {
         setTimeout(function() {
           console.info('_reconnect 1')
-          self.ws = new WebSocket(self._url, 'civet-protocol');
+          ws = new WebSocket(_url, 'civet-protocol');
           ExtensionContext._isConnecting = true;
           self._initWebsocket();
         }, 2500)
@@ -91,53 +112,27 @@ export namespace civet {
     }
   }
 
-  export class IResource {
-    readonly id: number;
-    readonly type: string;
-    readonly name: string;
-
-    path: string[];
-    meta: JSON;
-    tag: string[];
-    category: string[];
-    anno?: string[];
-    keyword: string[];
-    [propName: string]: any;
-
-    load(path: string): Thenable<boolean> {
-      console.info('read', path)
+  /**
+   * resource of uri, such as file, web page, or remote machine setting etc.
+   */
+  export class Resource {
+    static addByPath(path: string, dbname?: string): boolean {
+      console.info('read', path, dbname)
       const msg = {id: 'load', db: extensionContext.currentDB, data: { url: path} }
-      civet.extensionContext.send(JSON.stringify(msg))
-      return;
+      send(JSON.stringify(msg))
+      return true;
     }
-    save(path: string): Thenable<boolean> {
-      console.info('write', path)
-      return;
+    
+    static addByBinary(bin: ArrayBuffer, dbname?:string): boolean {
+      console.info('read', bin, dbname);
+      return true;
     }
-  }
-
-  interface Thenable<T> {
-    then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => TResult | Thenable<TResult>): Thenable<TResult>;
-    then<TResult>(onfulfilled?: (value: T) => TResult | Thenable<TResult>, onrejected?: (reason: any) => void): Thenable<TResult>;
   }
 
   /**
    * extension context
    */
   export let extensionContext: ExtensionContext = new ExtensionContext();
-
-  export declare function activate(context: ExtensionContext);
-  export declare function unactivate();
-
-  export interface IProperty {
-    readonly key: string;
-  }
-
-  /**
-   * resource of uri, such as file, web page, or remote machine setting etc.
-   */
-  export let resource: IResource = new IResource;
-
 
 }
 
