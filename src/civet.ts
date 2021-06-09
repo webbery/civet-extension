@@ -14,6 +14,7 @@ export namespace civet {
   }
 
   const CivetEvents = {
+    EmitLoad: 'load',
     OnInit: 'config',
     OnDBChange: 'dbchange',
     OnDownloadError: 'download',
@@ -44,7 +45,7 @@ export namespace civet {
       this._events[CivetEvents.OnConnectError] = cb;
     }
 
-    set onCennectAgain(cb: any) {
+    set onCennectAgain(cb: (data: any) => {}) {
       this._events[CivetEvents.OnConnectAgain] = cb;
     }
 
@@ -118,7 +119,7 @@ export namespace civet {
   export class Resource {
     static addByPath(path: string, dbname?: string): boolean {
       console.info('read', path, dbname)
-      const msg = {id: 'load', db: extensionContext.currentDB, data: { url: path} }
+      const msg = {id: CivetEvents.EmitLoad, db: dbname, data: { url: path} }
       send(JSON.stringify(msg))
       return true;
     }
