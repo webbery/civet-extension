@@ -15,14 +15,16 @@ var fs = require('fs');
 function DtsBundlePlugin() {}
 DtsBundlePlugin.prototype.apply = function (compiler) {
   compiler.plugin('done', function() {
-    var dts = require('dts-bundle')
-    dts.bundle({
-      name: 'civet',
-      main: 'src/civet.d.ts',
-      out: '../index.d.ts',
-      removeSource: true,
-      outputAsModuleFolder: true
-    })
+    if (fs.existsSync('src/civet.d.ts')) {
+      var dts = require('dts-bundle')
+      dts.bundle({
+        name: 'civet',
+        main: 'src/civet.d.ts',
+        out: '../index.d.ts',
+        removeSource: true,
+        outputAsModuleFolder: true
+      })
+    }
   })
 }
 

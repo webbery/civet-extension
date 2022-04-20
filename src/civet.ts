@@ -6,17 +6,19 @@ import { ExtensionRequest, ExtensionResponse, CivetExtensionRequest } from './pr
  */
 export const version: string = '0.0.2';
 
+let _resolve = null;
+let _reject = null;
 class ExtensionContext{
   private _platform: Platform;
   private _currentDB: string;
   private ws: WebSocket;
   private _url: string = 'ws://localhost:21313';
-  private _config: any;
   static _isConnecting: boolean = false;
   private _events: Map<string, any> = new Map<string, any>();
 
   constructor() {
     this._platform = new Platform()
+    this._reconnect()
     this._initWebsocket()
     this._events[ExtensionResponse.NotifyCurrentDB] = this._onInit
   }
@@ -29,8 +31,18 @@ class ExtensionContext{
     this._events[ExtensionResponse.NotifyDBChanged] = cb;
   }
 
-  set onDownloadError(cb: any) {
-    this._events[ExtensionResponse.NotifyDownloadError] = cb;
+  set onDownloadError(cb: (id: number, params: any) => void) {
+    this._events[ExtensionResponse.NotifyDownloadError] = function(id, params) {
+      cb(id, params)
+      _reject(false)
+    };
+  }
+
+  set onDownloadSuccess(cb: (id: number, params: any) => void) {
+    this._events[ExtensionResponse.NotifyDownloadSuccess] = function(id, params) {
+      _resolve(true)
+      cb(id, params)
+    };
   }
 
   set onCennectError(cb: any) {
@@ -41,45 +53,49 @@ class ExtensionContext{
     this._events[ExtensionResponse.NotifyReconnect] = cb;
   }
 
-  private _onInit(data: any) {
-    this._config = data.config
+  private _onInit(id: number, params: any) {
     let storage = _extensionContext._platform.storage;
+    // 同步消息id
+    CivetExtensionRequest.id = id;
     _extensionContext._platform.storage.get(['current'], function(result) {
+      // console.debug('message:', params)
       if (Object.keys(result).length === 0) {
-        storage.set({current: data.config.db[0]}, function(){})
-        _extensionContext._currentDB = data.config.db[0]
+        const curDB = params.curdb
+        storage.set({current: curDB}, function(){})
+        _extensionContext._currentDB = curDB
       }
       else {
-        console.info('current:', result)
+        // console.info('current:', result)
         _extensionContext._currentDB = result
       }
     })
   }
 
-  private _onerror(event) {
-    console.info('_reconnect 2', event)
+  private _onerror() {
+    // console.info('_reconnect 2', event)
     // extensionContext._reconnect()
   }
   private _onopen(event){
     console.info(event)
     ExtensionContext._isConnecting = false;
   }
-  private _onclose(event){
-    console.info('_reconnect 3',event)
+  private _onclose(){
+    // console.info('_reconnect 3',event)
     _extensionContext._reconnect()
   }
   private _onmessage(event) {
     if (!event.data) return
-    console.info('_onmessage', event)
     const data = JSON.parse(event.data)
-    this._events[data.id](data);
+    // console.info('_onmessage', data, this._events)
+    const method = this._events[data.method]
+    if (method) method(data.id, data.params);
   }
 
   private _reconnect() {
     const self = this;
     // if (ExtensionContext._isConnecting === false) {
       setTimeout(function() {
-        console.info('_reconnect 1')
+        // console.info('_reconnect 1')
         self.ws = new WebSocket(self._url, 'civet-protocol');
         ExtensionContext._isConnecting = true;
         self._initWebsocket();
@@ -92,7 +108,7 @@ class ExtensionContext{
     this.ws.onerror = this._onerror;
     this.ws.onopen = this._onopen;
     this.ws.onclose = this._onclose;
-    this.ws.onmessage = this._onmessage;
+    this.ws.onmessage = this._onmessage.bind(this);
     return true;
   }
 
@@ -103,9 +119,6 @@ class ExtensionContext{
     return true
   }
 }
-
-let _resolve = null;
-let _reject = null;
   /**
    * resource of uri, such as file, web page, or remote machine setting etc.
    */
@@ -114,11 +127,19 @@ let _reject = null;
 
     constructor(context: ExtensionContext) {
       this.#context = context
+      // console.info('construction resource')
     }
 
     addByPath(path: string, dbname?: string): Promise<boolean> {
-      console.info('read', path, dbname)
-      const msg = new CivetExtensionRequest(ExtensionRequest.AddResource, {db: dbname, url: path})
+      // console.info('read', path, dbname)
+      let resourceDB = dbname || this.#context.currentDB
+      if (!resourceDB) {
+        return new Promise((_, reject) => {
+          console.error(`cannot connect civet, please check you extension`)
+          reject(`use resource db ${resourceDB}`)
+        })
+      }
+      const msg = new CivetExtensionRequest(ExtensionRequest.AddResource, {db: resourceDB, url: path})
       return new Promise((resolve, reject) => {
         this.#context.send(msg)
         _resolve = resolve;
@@ -129,6 +150,14 @@ let _reject = null;
     addByBinary(bin: ArrayBuffer, dbname?:string): boolean {
       console.info('read', bin, dbname);
       return true;
+    }
+
+    onDownloadSuccess(cb: (id: number, params: any) => void) {
+      this.#context.onDownloadSuccess = cb
+    }
+
+    onDownloadFail(cb: (id: number, params: any) => void) {
+      this.#context.onDownloadError = cb
     }
   }
 
