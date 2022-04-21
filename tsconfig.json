@@ -6,11 +6,8 @@
         "experimentalDecorators": true,
         "declaration": true,
         "baseUrl": "./",
+        "moduleResolution":"Node",
         "lib": ["es6", "DOM"]
     },
-    "files": [
-        "civet.ts",
-        "src/**/*.ts"
-    ],
     "exclude": ["node_modules"]
 }

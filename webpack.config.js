@@ -1,30 +1,20 @@
 var nodeExternals = require('webpack-node-externals');
 var webpack = require('webpack');
 var path = require('path');
-var fs = require('fs');
-
-/* helper function to get into build directory */
-// var distPath = function(name) {
-//   if (undefined === name) {
-//     return path.join('dist');
-//   }
-
-//   return path.join('dist', name);
-// };
 
 function DtsBundlePlugin() {}
 DtsBundlePlugin.prototype.apply = function (compiler) {
-  compiler.plugin('done', function() {
-    if (fs.existsSync('src/civet.d.ts')) {
-      var dts = require('dts-bundle')
-      dts.bundle({
-        name: 'civet',
-        main: 'src/civet.d.ts',
-        out: '../index.d.ts',
-        removeSource: true,
-        outputAsModuleFolder: true
-      })
-    }
+  compiler.hooks.afterEmit.tap({name: 'DtsBundlePlugin'}, function() {
+    setTimeout(function() {
+      var Generator = require('npm-dts').Generator
+      var generator = new Generator({
+        entry: 'src/civet.ts',
+        logLevel: 'debug'
+      }, true, true);
+      generator.generate().catch(function(e) {
+        throw e;
+      });
+    })
   })
 }
 
