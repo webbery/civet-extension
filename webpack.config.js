@@ -8,8 +8,7 @@ DtsBundlePlugin.prototype.apply = function (compiler) {
     setTimeout(function() {
       var Generator = require('npm-dts').Generator
       var generator = new Generator({
-        entry: 'src/civet.ts',
-        logLevel: 'debug'
+        entry: 'src/civet.ts'
       }, true, true);
       generator.generate().catch(function(e) {
         throw e;
