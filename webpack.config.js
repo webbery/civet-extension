@@ -50,7 +50,7 @@ var webpack_opts = {
     rules: [
       {
         test: /\.ts$/,
-        use: ["babel-loader", "awesome-typescript-loader"],
+        use: ["babel-loader"],
         exclude: [path.resolve(__dirname, "node_modules")]
       }
     ]

@@ -11,6 +11,7 @@ let _reject = null;
 class ExtensionContext{
   private _platform: Platform;
   private _currentDB: string;
+  private _allDBs: string[];
   private ws: WebSocket;
   private _url: string = 'ws://localhost:21313';
   static _isConnecting: boolean = false;
@@ -20,11 +21,16 @@ class ExtensionContext{
     this._platform = new Platform()
     this._reconnect()
     this._initWebsocket()
-    this._events[ExtensionResponse.NotifyCurrentDB] = this._onInit
+    this._events[ExtensionResponse.NotifyCurrentDB] = this._onInit.bind(this)
+    this.onRecieveAllResourceDB = this._onRecieveAllDB.bind(this)
   }
 
   get currentDB(): string {
     return this._currentDB
+  }
+
+  get allDBs(): string[] {
+    return this._allDBs
   }
 
   set onCurrentDBChange(cb: any) {
@@ -45,6 +51,10 @@ class ExtensionContext{
     };
   }
 
+  set onRecieveAllResourceDB(cb: (id: number, params: any) => void) {
+    this._events[ExtensionResponse.NotifyAllResourceDB] = cb.bind(this)
+  }
+
   set onCennectError(cb: any) {
     this._events[ExtensionResponse.NotifyConnectError] = cb;
   }
@@ -54,23 +64,27 @@ class ExtensionContext{
   }
 
   private _onInit(id: number, params: any) {
-    let storage = _extensionContext._platform.storage;
+    let storage = this._platform.storage;
+    let self = this;
     // 同步消息id
     CivetExtensionRequest.id = id;
-    _extensionContext._platform.storage.get(['current'], function(result) {
+    this._platform.storage.get(['current'], function(result) {
       // console.debug('message:', params)
       if (Object.keys(result).length === 0) {
         const curDB = params.curdb
         storage.set({current: curDB}, function(){})
-        _extensionContext._currentDB = curDB
+        self._currentDB = curDB
       }
       else {
         // console.info('current:', result)
-        _extensionContext._currentDB = result
+        self._currentDB = params.curdb
       }
     })
   }
 
+  private _onRecieveAllDB(_: number, params: any) {
+    this._allDBs = params['dbs']
+  }
   private _onerror() {
     // console.info('_reconnect 2', event)
     // extensionContext._reconnect()
@@ -131,8 +145,8 @@ class ExtensionContext{
     }
 
     addByPath(path: string, dbname?: string): Promise<boolean> {
-      // console.info('read', path, dbname)
       let resourceDB = dbname || this.#context.currentDB
+      // console.info('dbname', resourceDB, dbname, this.#context)
       if (!resourceDB) {
         return new Promise((_, reject) => {
           console.error(`cannot connect civet, please check you extension`)
@@ -172,8 +186,7 @@ let _extensionContext: ExtensionContext = new ExtensionContext();
 export let resource: Resource = new Resource(_extensionContext);
 
 export function getAllResourceDB(): string[] {
-  let dbs: string[] = [];
-  return dbs;
+  return _extensionContext.allDBs;
 }
 
 export function getCurrentActiveDB(): string {
